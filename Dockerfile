@@ -20,4 +20,11 @@ RUN apt-get update && apt-get install -y python3 python3-pip python-dev libmupdf
 
 COPY --from=build  /home/pdfalto/pdfalto/pdfalto /usr/bin/pdfalto
 
-CMD ["/usr/bin/pdfalto", "-v"]
+COPY requirements.txt /opt/app/requirements.txt
+
+WORKDIR /opt/app
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . /opt/app
+
+# CMD ["/usr/bin/pdfalto", "-v"]
+CMD ["python3", "/opt/app/monitor.py"]
