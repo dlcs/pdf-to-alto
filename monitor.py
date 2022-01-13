@@ -62,9 +62,11 @@ def _handle_message(received_message):
 
     pdf_identifier = message_body.get("pdfIdentifier", generate_guid())
 
-    extract_alto(pdf_location, pdf_identifier)
+    success = extract_alto(pdf_location, pdf_identifier)
 
-    # raise 'done' notification
+    # TODO - raise 'done' notification
+
+    return success
 
 
 if __name__ == "__main__":
