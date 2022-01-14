@@ -26,14 +26,14 @@ def extract_alto(pdf_location, pdf_identifier):
     work_folder = _create_work_folder(pdf_identifier)
 
     try:
-        target_file = Path(work_folder, f"{pdf_identifier}.pdf")
+        target_file = Path(work_folder, pdf_location.split("/")[-1])
         downloaded_pdf = _download_pdf(pdf_location, target_file)
 
         if not downloaded_pdf:
             logger.error("Unable to download PDF")
             return False
 
-        _generate_alto(target_file, work_folder)
+        _generate_alto(target_file, work_folder, pdf_identifier)
         return True
     except Exception:
         e = traceback.format_exc()
@@ -67,20 +67,22 @@ def _download_pdf(pdf_location, target_file):
     return False
 
 
-def _generate_alto(pdf_location, work_folder):
+def _generate_alto(pdf_location, work_folder, pdf_identifier):
     pages = _get_pdf_page_count(pdf_location)
     logger.debug(f"Processing {pdf_location}, which has {pages} pages")
 
     alto_folder = Path(work_folder, 'alto')
-    alto_folder.mkdir()
+    alto_folder.mkdir(exist_ok=True)
     for i in range(1, pages + 1):
         logger.debug(f"Processing page {i}")
-        output = Path(alto_folder, f"{i}.xml")
-        command = f"/usr/bin/pdfalto -readingOrder -f {i} -l {i} {pdf_location} {output}"
+        output = Path(alto_folder, f"{pdf_identifier}-{i - 1:04d}.xml")
+        flags = '' if RESCALE_ALTO else '-noImage'
+        command = f"/usr/bin/pdfalto -readingOrder {flags} -f {i} -l {i} {pdf_location} {output}"
         logger.debug(f"running {command}")
         subprocess.run(command, shell=True, check=True, stdout=PIPE, stderr=PIPE)
 
         if RESCALE_ALTO:
+            logger.debug(f"Rescaling page {i}")
             _rescale_alto(output)
 
 
@@ -116,22 +118,49 @@ def _rescale_alto(alto_file: Path):
     scale_w = width / page_width
     scale_h = height / page_height
 
-    _set_scaled_attr(page, "WIDTH", scale_w)
-    _set_scaled_attr(page, "HEIGHT", scale_h)
+    page.set("WIDTH", str(scale_w * page_width))
+    page.set("HEIGHT", str(scale_h * page_height))
 
     for el in page.iter(f'{ns}TextBlock', f'{ns}TextLine', f'{ns}String', f'{ns}SP'):
-        _set_scaled_attr(el, "WIDTH", scale_w)
-        _set_scaled_attr(el, "HPOS", scale_w)
-        _set_scaled_attr(el, "HEIGHT", scale_h)
-        _set_scaled_attr(el, "VPOS", scale_h)
+        _scale_element(el, scale_w, width, True)
+        _scale_element(el, scale_h, height, False)
 
     alto_file.rename(str(alto_file).replace(".xml", ".orig.xml"))
     alto_tree.write(str(alto_file))
 
 
-def _set_scaled_attr(el, attr_name, scale):
-    if attr_val := el.get(attr_name):
-        el.set(attr_name, str(int(scale * float(attr_val))))
+def _scale_element(el, scale: float, max_dimension: float, width: bool):
+    if width:
+        dimension_attr = "WIDTH"
+        position_attr = "HPOS"
+    else:
+        dimension_attr = "HEIGHT"
+        position_attr = "VPOS"
+
+    dimension = el.get(dimension_attr)
+    position = el.get(position_attr)
+
+    new_d = _scale_value(dimension, scale)
+    new_p = _scale_value(position, scale)
+
+    if new_p + new_d > max_dimension:
+        overlap = (new_p + new_d) - max_dimension
+        logger.warn(f"Rescaling {el} will result in out of bounds dimension, reducing {dimension_attr} by {overlap}")
+        new_d = new_d - overlap
+
+    # NOTE space doesn't have dimension
+    if new_d:
+        el.set(dimension_attr, str(int(new_d)))
+
+    if new_p:
+        el.set(position_attr, str(int(new_p)))
+
+
+def _scale_value(current: str, scale: float) -> int:
+    if not current:
+        return 0
+
+    return int(scale * float(current))
 
 
 def _get_image_size(alto_file: Path):
