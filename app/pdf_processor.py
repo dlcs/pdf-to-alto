@@ -176,19 +176,6 @@ class PDFProcessor:
 
         return int(scale * float(current))
 
-    @staticmethod
-    def _get_image_size(alto_file: Path):
-        # NOTE - expectation is a single image per page
-        target_image = Path(f"{alto_file}_data", "image-1.png")
-        width = 0
-        height = 0
-        try:
-            width, height = imagesize.get(target_image)
-        except FileNotFoundError:
-            logger.info(f"Attempt to rescale {alto_file} failed as image {target_image} not found")
-
-        return width, height
-
 
 def _rm_tree(pth: Path):
     for child in pth.iterdir():
