@@ -4,12 +4,13 @@ import time
 
 from logzero import logger
 
-from app.aws_factory import get_aws_resource
+from app.aws_factory import get_aws_resource, get_aws_client
 from app.pdf_processor import PDFProcessor, generate_guid
-from app.settings import INCOMING_QUEUE, MONITOR_SLEEP_SECS
+from app.settings import INCOMING_QUEUE, MONITOR_SLEEP_SECS, COMPLETED_TOPIC_ARN
 from app.signal_handler import SignalHandler
 
-sqs = get_aws_resource('sqs')
+sqs = get_aws_resource("sqs")
+sns = get_aws_client("sns")
 
 
 def start_monitoring():
@@ -23,7 +24,7 @@ def start_monitoring():
         while not signal_handler.cancellation_requested():
             message_received = False
             for message in _get_messages_from_queue(incoming_queue):
-                if message:
+                if message and not signal_handler.cancellation_requested():
                     message_received = True
                     try:
                         if _handle_message(message):
@@ -34,7 +35,7 @@ def start_monitoring():
                     else:
                         message_received = False
 
-            if not message_received:
+            if not message_received and not signal_handler.cancellation_requested():
                 time.sleep(MONITOR_SLEEP_SECS)
     except Exception as e:
         logger.error(f"Error getting messages: {e}")
@@ -65,10 +66,28 @@ def _handle_message(received_message):
     processor = PDFProcessor(pdf_location, pdf_identifier, output)
     success = processor.extract_alto()
 
-    # TODO - upload results to S3 bucket
-    # TODO - raise 'done' notification
+    if success:
+        logger.info(f"Processing {pdf_location} finished successfully")
+        _raise_completed_notification(message_body, len(processor.generated_alto))
+    else:
+        logger.info(f"Processing {pdf_location} failed")
 
     return success
+
+
+def _raise_completed_notification(original_message, number_of_altos):
+    if not COMPLETED_TOPIC_ARN:
+        logger.info("No topic ARN configured.")
+        return
+
+    try:
+        original_message["numberOfFiles"] = number_of_altos
+        response = sns.publish(
+            TopicArn=COMPLETED_TOPIC_ARN,
+            Message=json.dumps(original_message)
+        )
+    except Exception as e:
+        logger.error(f"Error raising completed notification. {e}")
 
 
 if __name__ == "__main__":

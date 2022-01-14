@@ -190,7 +190,7 @@ class PDFProcessor:
             return True
 
         success = True
-        logger.info(f"Uploading {len(self.generate_alto)} alto files to s3://{self.bucket}/{self.prefix}/")
+        logger.info(f"Uploading {len(self.generated_alto)} alto files to s3://{self.bucket}/{self.prefix}/")
         for o in self.generated_alto:
             try:
                 response = s3.upload_file(str(o), self.bucket, f"{self.prefix}/{o.name}")
