@@ -7,7 +7,7 @@ import boto3
 
 from logzero import logger
 
-from app.pdf_processor import extract_alto, generate_guid
+from app.pdf_processor import PDFProcessor, generate_guid
 from app.signal_handler import SignalHandler
 
 REGION = os.environ.get('AWS_REGION', 'eu-west-1')
@@ -62,8 +62,10 @@ def _handle_message(received_message):
 
     pdf_identifier = message_body.get("pdfIdentifier", generate_guid())
 
-    success = extract_alto(pdf_location, pdf_identifier)
+    processor = PDFProcessor(pdf_location, pdf_identifier)
+    success = processor.extract_alto()
 
+    # TODO - upload results to S3 bucket
     # TODO - raise 'done' notification
 
     return success
