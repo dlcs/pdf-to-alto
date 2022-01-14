@@ -1,21 +1,15 @@
 import json
-import os
 import traceback
 import time
 
-import boto3
-
 from logzero import logger
 
+from app.aws_factory import get_aws_resource
 from app.pdf_processor import PDFProcessor, generate_guid
+from app.settings import INCOMING_QUEUE, MONITOR_SLEEP_SECS
 from app.signal_handler import SignalHandler
 
-REGION = os.environ.get('AWS_REGION', 'eu-west-1')
-INCOMING_QUEUE = os.environ.get('INCOMING_QUEUE')
-MONITOR_SLEEP_SECS = float(os.environ.get('MONITOR_SLEEP_SECS', 30))
-
-sqs = boto3.resource('sqs', REGION)
-s3 = boto3.client('s3', REGION)
+sqs = get_aws_resource('sqs')
 
 
 def start_monitoring():
@@ -32,7 +26,8 @@ def start_monitoring():
                 if message:
                     message_received = True
                     try:
-                        _handle_message(message)
+                        if _handle_message(message):
+                            message.delete()
                     except Exception:
                         e = traceback.format_exc()
                         logger.error(f"Error processing message: {e}")
@@ -60,9 +55,14 @@ def _handle_message(received_message):
         logger.error("Message does not specify pdf location")
         return False
 
+    output = message_body.get("outputLocation", "")
+    if not output:
+        logger.error("Message does not specify output location")
+        return False
+
     pdf_identifier = message_body.get("pdfIdentifier", generate_guid())
 
-    processor = PDFProcessor(pdf_location, pdf_identifier)
+    processor = PDFProcessor(pdf_location, pdf_identifier, output)
     success = processor.extract_alto()
 
     # TODO - upload results to S3 bucket

@@ -27,5 +27,4 @@ WORKDIR /opt/app
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . /opt/app
 
-# CMD ["/usr/bin/pdfalto", "-v"]
 CMD ["python3", "/opt/app/monitor.py"]

@@ -1,26 +1,26 @@
-import os
 import subprocess
 import sys
 import traceback
 import uuid
 
 import fitz
-import imagesize
 import requests
 
 from subprocess import PIPE
+
+from botocore.exceptions import ClientError
 from lxml import etree
 from logzero import logger
 from pathlib import Path
 
-DOWNLOAD_CHUNK_SIZE = int(os.environ.get("DOWNLOAD_CHUNK_SIZE", 2048))
-WORKING_FOLDER = os.environ.get("WORKING_FOLDER", "./work")
-REMOVE_WORK_DIR = os.environ.get("REMOVE_WORK_DIR", "True").lower() in ("true", "t", "1")
-RESCALE_ALTO = os.environ.get("RESCALE_ALTO", "True").lower() in ("true", "t", "1")
+from app.aws_factory import get_aws_client
+from app.settings import DOWNLOAD_CHUNK_SIZE, RESCALE_ALTO, REMOVE_WORK_DIR, WORKING_FOLDER
+
+s3 = get_aws_client('s3')
 
 
 class PDFProcessor:
-    def __init__(self, pdf_location: str, pdf_identifier: str):
+    def __init__(self, pdf_location: str, pdf_identifier: str, output_location: str):
         """
         Create new PDFProcessor object
         :param pdf_location: URI where PDF can be downloaded from
@@ -30,6 +30,14 @@ class PDFProcessor:
         self.generated_alto = []
         self.pdf_location = pdf_location
         self.pdf_identifier = pdf_identifier
+
+        if output_location:
+            out_split = output_location.replace("s3://", "").split("/")
+            self.bucket = out_split[0]
+            self.prefix = str.join("/", out_split[1:])
+        else:
+            self.bucket = None
+            self.prefix = None
 
     def extract_alto(self) -> bool:
         """
@@ -49,6 +57,7 @@ class PDFProcessor:
                 return False
 
             self._generate_alto(target_file, work_folder)
+            self._upload_to_s3()
             return True
         except Exception:
             e = traceback.format_exc()
@@ -175,6 +184,21 @@ class PDFProcessor:
             return 0
 
         return int(scale * float(current))
+
+    def _upload_to_s3(self):
+        if not self.bucket:
+            return True
+
+        success = True
+        logger.info(f"Uploading {len(self.generate_alto)} alto files to s3://{self.bucket}/{self.prefix}/")
+        for o in self.generated_alto:
+            try:
+                response = s3.upload_file(str(o), self.bucket, f"{self.prefix}/{o.name}")
+            except ClientError as e:
+                logger.error("Failed to upload {o}. {e}")
+                success = False
+
+        return success
 
 
 def _rm_tree(pth: Path):
