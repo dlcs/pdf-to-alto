@@ -4,6 +4,7 @@ import sys
 import traceback
 import uuid
 
+import fitz
 import imagesize
 import requests
 
@@ -11,9 +12,6 @@ from subprocess import PIPE
 from lxml import etree
 from logzero import logger
 from pathlib import Path
-from pdfminer.pdfparser import PDFParser
-from pdfminer.pdfdocument import PDFDocument
-from pdfminer.pdfinterp import resolve1
 
 DOWNLOAD_CHUNK_SIZE = int(os.environ.get('DOWNLOAD_CHUNK_SIZE', 2048))
 WORKING_FOLDER = os.environ.get('WORKING_FOLDER', './work')
@@ -68,40 +66,45 @@ def _download_pdf(pdf_location, target_file):
 
 
 def _generate_alto(pdf_location, work_folder, pdf_identifier):
-    pages = _get_pdf_page_count(pdf_location)
-    logger.debug(f"Processing {pdf_location}, which has {pages} pages")
+    pdf_attrs = _get_pdf_page_attributes(pdf_location)
+    logger.debug(f"Processing {pdf_location}, which has {len(pdf_attrs)} pages")
 
     alto_folder = Path(work_folder, 'alto')
     alto_folder.mkdir(exist_ok=True)
-    for i in range(1, pages + 1):
-        logger.debug(f"Processing page {i}")
-        output = Path(alto_folder, f"{pdf_identifier}-{i - 1:04d}.xml")
-        flags = '' if RESCALE_ALTO else '-noImage'
-        command = f"/usr/bin/pdfalto -readingOrder {flags} -f {i} -l {i} {pdf_location} {output}"
+
+    for i, dimensions in pdf_attrs.items():
+        page_num = i + 1
+        logger.debug(f"Processing page {page_num}")
+        output = Path(alto_folder, f"{pdf_identifier}-{i:04d}.xml")
+        command = f"/usr/bin/pdfalto -readingOrder -noImage -f {page_num} -l {page_num} {pdf_location} {output}"
         logger.debug(f"running {command}")
         subprocess.run(command, shell=True, check=True, stdout=PIPE, stderr=PIPE)
 
         if RESCALE_ALTO:
-            logger.debug(f"Rescaling page {i}")
-            _rescale_alto(output)
+            width, height = dimensions
+            logger.debug(f"Rescaling page {page_num} to {width} x {height} (w x h)")
+            _rescale_alto(output, width, height)
 
 
-def _get_pdf_page_count(pdf):
-    logger.debug(f'getting page count for {pdf}')
-    pdf = open(pdf, 'rb')
-    parser = PDFParser(pdf)
-    document = PDFDocument(parser)
-    pages = int(resolve1(document.catalog['Pages'])['Count'])
-    return pages
+def _get_pdf_page_attributes(pdf):
+    logger.debug(f'getting page and image attributes for {pdf}')
+    doc = fitz.open(pdf)
+
+    if not RESCALE_ALTO:
+        # if not rescaling we don't care about page dimensions
+        return {i: [] for i in range(len(doc))}
+
+    pdf_addrs = {}
+    for i in range(len(doc)):
+        for img in doc.get_page_images(i):
+            xref = img[0]
+            pix = fitz.Pixmap(doc, xref)
+            pdf_addrs[i] = [pix.w, pix.h]
+
+    return pdf_addrs
 
 
-def _rescale_alto(alto_file: Path):
-    # NOTE - expectation is a single image per page
-    width, height = _get_image_size(alto_file)
-
-    if not width or not height:
-        return
-
+def _rescale_alto(alto_file: Path, width: int, height: int):
     ns = "{http://www.loc.gov/standards/alto/ns-v3#}"
 
     parser = etree.XMLParser(remove_blank_text=True)
@@ -145,7 +148,7 @@ def _scale_element(el, scale: float, max_dimension: float, width: bool):
 
     if new_p + new_d > max_dimension:
         overlap = (new_p + new_d) - max_dimension
-        logger.warn(f"Rescaling {el} will result in out of bounds dimension, reducing {dimension_attr} by {overlap}")
+        logger.debug(f"Rescaling {el} will result in out of bounds dimension, reducing {dimension_attr} by {overlap}")
         new_d = new_d - overlap
 
     # NOTE space doesn't have dimension
