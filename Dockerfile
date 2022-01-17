@@ -27,4 +27,6 @@ WORKDIR /opt/app
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . /opt/app
 
+RUN chmod +x wait-for-localstack.sh
+
 CMD ["python3", "/opt/app/monitor.py"]

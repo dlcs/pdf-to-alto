@@ -1,0 +1,29 @@
+version: '3.8'
+
+volumes:
+  localstack_tmp: { }
+
+services:
+  localstack:
+    build:
+      context: ./compose/localstack
+      dockerfile: Dockerfile
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,sqs,sns
+      - HOSTNAME_EXTERNAL=localstack
+      - DEFAULT_REGION=eu-west-1
+    volumes:
+      - "localstack_tmp:/tmp/localstack"
+
+  pdf-to-alto:
+    build: .
+    depends_on:
+      - "localstack"
+    env_file:
+      - .env
+    environment:
+      - LOCALSTACK_ADDRESS=http://localstack:4566
+      - LOCALSTACK=1
+    command: [ "/opt/app/wait-for-localstack.sh" ]

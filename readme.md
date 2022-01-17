@@ -60,7 +60,12 @@ The following environment variables can be used to configure the app:
 
 There is a multi-stage Dockerfile that builds the `pdfalto` binary and copies it to a new stage.
 
+[docker-compose.yml](/docker-compose.yml) will build and start the main Python app alongside a LocalStack instance.
+
 ```bash
+# build and start image using LocalStack
+docker-compose up
+
 # build image
 docker build --tag pdf-to-alto:local .
 
