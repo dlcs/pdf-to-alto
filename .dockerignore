@@ -18,6 +18,7 @@
 **/.classpath
 **/.dockerignore
 **/.env
+**/.env.dist
 **/.git
 **/.gitignore
 **/.idea
@@ -27,3 +28,9 @@
 **/docker-compose*
 **/Dockerfile*
 readme.md
+**/work
+**/sample.json
+**/docker-compose.local.yml
+**/.idea
+**/.github
+**/compose
