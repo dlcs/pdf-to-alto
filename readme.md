@@ -1,7 +1,7 @@
 # PDF to ALTO
 
 Service that listens for incoming messages from SQS. On receipt of a message this service will download reference PDF,
-extract ALTO file per-page and upload to specified S3 bucket. 
+extract ALTO file per-page and upload to specified S3 bucket.
 
 If `COMPLETED_TOPIC_ARN` env var specified a notification will be raised.
 
@@ -74,7 +74,7 @@ docker run --env-file .env -it --rm --name pdf-to-alto pdf-to-alto:local
 
 # run docker image to process 1 single api
 docker run -it --rm --name pdf-to-alto \
-  pdf-to-alto:local \ 
+  pdf-to-alto:local \
   opt/app/app/pdf_processor.py https://text.example/test.pdf my-pdf-identifier s3://pdf-bucket/alto
 ```
 
