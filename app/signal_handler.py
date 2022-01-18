@@ -5,6 +5,7 @@ from logzero import logger
 
 class SignalHandler:
     """Handles sigterm and sigint events"""
+
     def __init__(self):
         self._cancellation_requested = False
         self._setup_signal_handling()

@@ -14,9 +14,14 @@ from logzero import logger
 from pathlib import Path
 
 from app.aws_factory import get_aws_client
-from app.settings import DOWNLOAD_CHUNK_SIZE, RESCALE_ALTO, REMOVE_WORK_DIR, WORKING_FOLDER
+from app.settings import (
+    DOWNLOAD_CHUNK_SIZE,
+    RESCALE_ALTO,
+    REMOVE_WORK_DIR,
+    WORKING_FOLDER,
+)
 
-s3 = get_aws_client('s3')
+s3 = get_aws_client("s3")
 
 
 class PDFProcessor:
@@ -81,7 +86,9 @@ class PDFProcessor:
                     file.write(chunk)
             return True
         except Exception as download_exception:
-            logger.exception(f"problem during download of {self.pdf_location} to {target_file}: {download_exception}")
+            logger.exception(
+                f"problem during download of {self.pdf_location} to {target_file}: {download_exception}"
+            )
         return False
 
     def _generate_alto(self, pdf: Path, work_folder: Path):
@@ -144,7 +151,9 @@ class PDFProcessor:
         page.set("WIDTH", str(scale_w * page_width))
         page.set("HEIGHT", str(scale_h * page_height))
 
-        for el in page.iter(f"{ns}TextBlock", f"{ns}TextLine", f"{ns}String", f"{ns}SP"):
+        for el in page.iter(
+            f"{ns}TextBlock", f"{ns}TextLine", f"{ns}String", f"{ns}SP"
+        ):
             self._scale_element(el, scale_w, width, True)
             self._scale_element(el, scale_h, height, False)
 
@@ -168,7 +177,8 @@ class PDFProcessor:
         if new_p + new_d > max_dimension:
             overlap = (new_p + new_d) - max_dimension
             logger.debug(
-                f"Rescaling {el} will result in out of bounds dimension, reducing {dimension_attr} by {overlap}")
+                f"Rescaling {el} will result in out of bounds dimension, reducing {dimension_attr} by {overlap}"
+            )
             new_d = new_d - overlap
 
         # NOTE <Space/> elements don't have height dimensions
@@ -190,10 +200,14 @@ class PDFProcessor:
             return True
 
         success = True
-        logger.info(f"Uploading {len(self.generated_alto)} alto files to s3://{self.bucket}/{self.prefix}/")
+        logger.info(
+            f"Uploading {len(self.generated_alto)} alto files to s3://{self.bucket}/{self.prefix}/"
+        )
         for o in self.generated_alto:
             try:
-                response = s3.upload_file(str(o), self.bucket, f"{self.prefix}/{o.name}")
+                response = s3.upload_file(
+                    str(o), self.bucket, f"{self.prefix}/{o.name}"
+                )
             except ClientError as e:
                 logger.error("Failed to upload {o}. {e}")
                 success = False

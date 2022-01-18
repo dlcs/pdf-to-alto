@@ -83,8 +83,7 @@ def _raise_completed_notification(original_message, number_of_altos):
     try:
         original_message["numberOfFiles"] = number_of_altos
         response = sns.publish(
-            TopicArn=COMPLETED_TOPIC_ARN,
-            Message=json.dumps(original_message)
+            TopicArn=COMPLETED_TOPIC_ARN, Message=json.dumps(original_message)
         )
     except Exception as e:
         logger.error(f"Error raising completed notification. {e}")
