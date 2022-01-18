@@ -1,0 +1,5 @@
+{
+  "pdfLocation": "https://www.hq.nasa.gov/alsj/a17/A17_FlightPlan.pdf",
+  "pdfIdentifier": "a17_flightplan",
+  "outputLocation": "s3://pdf-to-alto/a17_flightplan_alto"
+}
