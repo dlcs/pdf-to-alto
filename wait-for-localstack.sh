@@ -4,7 +4,7 @@
 # when running in real AWS infra the SQS queues will already exist
 
 pip install awscli
-until AWS_ACCESS_KEY_ID=foo AWS_SECRET_ACCESS_KEY=bar aws sqs get-queue-url --queue-name incoming --endpoint-url http://localstack:4566 --region eu-west-1; do
+until AWS_ACCESS_KEY_ID=foo AWS_SECRET_ACCESS_KEY=bar aws sqs get-queue-url --queue-name ${INCOMING_QUEUE} --endpoint-url ${LOCALSTACK_ADDRESS} --region ${AWS_REGION}; do
   echo 'waiting for queue..'
   sleep 10
 done
