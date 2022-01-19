@@ -19,7 +19,7 @@ The incoming message is in the shape:
 
 Where
 * `pdfLocation` - the URL where PDF can be downloaded from.
-* `pdfIdentifier` - unique identifier for PDF. Generated altos will be in format `f"{pdfIdentifier}-{i:04d}.xml"`,
+* `pdfIdentifier` - unique identifier for PDF.
   where `i` is 0-based page index. If omitted a random uuid will be used.
 * `outputLocation` - s3 location where final ALTO files will be output. With or without preceding `s3://` and no
   trailing `/`.
@@ -27,6 +27,11 @@ Where
 (See [sample.json](/sample.json))
 
 The completed notification message echos back the original message with `"numberOfFiles"` property added.
+
+The generated alto file will be placed in `outputLocation`. The format of each file will depend on value of `PREPEND_ID`
+envvar. This format will be (where `i` is the page number):
+* If true: `f"{pdfIdentifier}-{i:04d}.xml"`
+* else `f"{i:04d}.xml"`,
 
 ## Technology
 

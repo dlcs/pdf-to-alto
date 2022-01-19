@@ -10,6 +10,7 @@ WORKING_FOLDER = os.environ.get("WORKING_FOLDER", "./work")
 REMOVE_WORK_DIR = _get_boolean("REMOVE_WORK_DIR", "True")
 RESCALE_ALTO = _get_boolean("RESCALE_ALTO", "True")
 MONITOR_SLEEP_SECS = float(os.environ.get("MONITOR_SLEEP_SECS", 30))
+PREPEND_ID = _get_boolean("PREPEND_ID", "True")
 
 # AWS
 REGION = os.environ.get("AWS_REGION", "eu-west-1")

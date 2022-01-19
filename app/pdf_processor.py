@@ -19,6 +19,7 @@ from app.settings import (
     RESCALE_ALTO,
     REMOVE_WORK_DIR,
     WORKING_FOLDER,
+    PREPEND_ID,
 )
 
 s3 = get_aws_client("s3")
@@ -101,7 +102,10 @@ class PDFProcessor:
         for i, dimensions in pdf_attrs.items():
             page_num = i + 1
             logger.debug(f"Processing page {page_num}")
-            output = Path(alto_folder, f"{self.pdf_identifier}-{i:04d}.xml")
+            xml_file = f"{i:04d}.xml"
+            if PREPEND_ID:
+                xml_file = f"{self.pdf_identifier}-{xml_file}"
+            output = Path(alto_folder, xml_file)
             command = f"/usr/bin/pdfalto -readingOrder -noImage -f {page_num} -l {page_num} {pdf} {output}"
             logger.debug(f"running {command}")
             subprocess.run(command, shell=True, check=True, stdout=PIPE, stderr=PIPE)
