@@ -19,11 +19,11 @@ jobs:
 
       - name: Set up Docker Buildx
         id: docker-setup-buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Docker metadata
         id: docker-meta
-        uses: docker/metadata-action@v3
+        uses: docker/metadata-action@v4
         with:
           images: ghcr.io/dlcs/pdf-to-alto
           tags: |
@@ -36,7 +36,7 @@ jobs:
 
       - name: Login to GitHub Container Registry
         id: docker-login
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -44,7 +44,7 @@ jobs:
 
       - name: Build and push
         id: docker-build-push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           context: .
           builder: ${{ steps.docker-setup-buildx.outputs.name }}
