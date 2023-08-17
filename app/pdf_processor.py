@@ -82,6 +82,8 @@ class PDFProcessor:
     def _download_pdf(self, target_file: Path):
         try:
             download_request = requests.get(self.pdf_location, stream=True)
+            download_request.raise_for_status()
+
             with open(target_file, "wb") as file:
                 for chunk in download_request.iter_content(DOWNLOAD_CHUNK_SIZE):
                     file.write(chunk)
