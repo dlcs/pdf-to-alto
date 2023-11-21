@@ -130,10 +130,16 @@ class PDFProcessor:
 
         pdf_addrs = {}
         for i in range(len(doc)):
+            found_dimensions = False
             for img in doc.get_page_images(i):
                 xref = img[0]
                 pix = fitz.Pixmap(doc, xref)
                 pdf_addrs[i] = [pix.w, pix.h]
+                found_dimensions = True
+
+            if not found_dimensions:
+                page = doc[i]
+                pdf_addrs[i] = [int(page.rect.width), int(page.rect.height)]
 
         return pdf_addrs
 
@@ -236,6 +242,6 @@ def generate_guid():
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    processor = PDFProcessor(args[0], args[1])
+    processor = PDFProcessor(args[0], args[1], args[2])
     processor.extract_alto()
     print(processor.generated_alto)
