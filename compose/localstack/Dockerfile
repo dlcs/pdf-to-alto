@@ -1,2 +1,2 @@
-FROM localstack/localstack:2.2.0
+FROM localstack/localstack:2.3.0
 COPY seed-resources.sh /etc/localstack/init/ready.d/
