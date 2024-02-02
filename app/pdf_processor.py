@@ -51,12 +51,13 @@ class PDFProcessor:
         :return: boolean indicating success
         """
 
-        logger.info(f"Processing {self.pdf_location} with id {self.pdf_identifier}")
+        logger.info(f"Processing '{self.pdf_location}' with id {self.pdf_identifier}")
         work_folder = self._create_work_folder()
 
         try:
-            target_file = Path(work_folder, self.pdf_location.split("/")[-1])
-            downloaded_pdf = self._download_pdf(target_file)
+            target_file = Path(work_folder, "download.pdf")
+            marker_file = Path(work_folder, "details.txt")
+            downloaded_pdf = self._download_pdf(target_file, marker_file)
 
             if not downloaded_pdf:
                 logger.error("Unable to download PDF")
@@ -79,7 +80,7 @@ class PDFProcessor:
         work_folder.mkdir(parents=True, exist_ok=False)
         return work_folder
 
-    def _download_pdf(self, target_file: Path):
+    def _download_pdf(self, target_file: Path, marker_file: Path):
         try:
             download_request = requests.get(self.pdf_location, stream=True)
             download_request.raise_for_status()
@@ -87,6 +88,9 @@ class PDFProcessor:
             with open(target_file, "wb") as file:
                 for chunk in download_request.iter_content(DOWNLOAD_CHUNK_SIZE):
                     file.write(chunk)
+
+            with open(marker_file, 'w') as marker:
+                marker.write(f"id:{self.pdf_identifier}, src:{self.pdf_location}")
             return True
         except Exception as download_exception:
             logger.exception(

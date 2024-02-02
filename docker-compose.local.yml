@@ -12,7 +12,6 @@ services:
       - "4566:4566"
     environment:
       - SERVICES=s3,sqs,sns
-      - HOSTNAME_EXTERNAL=localstack
-      - DEFAULT_REGION=eu-west-1
+      - LOCALSTACK_HOST=localstack
     volumes:
       - "localstack_tmp:/tmp/localstack"
